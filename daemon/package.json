@@ -1,0 +1,24 @@
+{
+  "name": "ehtplace",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/daemon.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "daemon": "node lib/daemon.js",
+    "sync": "node lib/sync.js",
+    "transpile": "babel src -d lib",
+    "transpile-bin": "babel bin -d binc"
+  },
+  "author": "Jesse McPherson",
+  "license": "ISC",
+  "dependencies": {
+    "daemon": "^1.1.0",
+    "redis": "^2.7.1",
+    "web3": "^0.19.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-preset-es2015": "^6.24.1"
+  }
+}

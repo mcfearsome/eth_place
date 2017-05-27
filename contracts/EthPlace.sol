@@ -2,7 +2,7 @@ pragma solidity ^0.4.11;
 
 contract EthPlace {
   address owner;
-  uint constant maxLocation = 999000;
+  uint constant maxLocation = 999999;
   uint constant bidIncrement = 1000000000000000;
   struct Pixel {
     address owner;
@@ -10,9 +10,10 @@ contract EthPlace {
     string url;
     uint price;
   }
+  uint public refundBalance;
   mapping (uint => Pixel) pixels;
-  mapping (address => uint) pendingRefunds;
-  event PixelPurchased(uint location, string color, string url, uint price);
+  mapping (address => uint) public pendingRefunds;
+  event PixelPurchased(uint indexed location, address purchaser, string color, string url, uint price);
   event PixelRefunded(address refundAddress);
 
   modifier onlyOwner {
@@ -24,8 +25,13 @@ contract EthPlace {
     owner = msg.sender;
   }
 
-  function getPixel(uint x, uint y) public returns (address, string, string, uint) {
+  function getPixel(uint x, uint y) constant returns (address, string, string, uint) {
     uint location = pixelLocation(x, y);
+    Pixel pixel = pixels[location];
+    return (pixel.owner, pixel.color, pixel.url, pixel.price);
+  }
+
+  function getPixel(uint location) constant returns (address, string, string, uint) {
     Pixel pixel = pixels[location];
     return (pixel.owner, pixel.color, pixel.url, pixel.price);
   }
@@ -56,11 +62,13 @@ contract EthPlace {
     // Now that currentPixel has been set, we can refund the old owner
     if (refundAddress != 0x0) {
       pendingRefunds[refundAddress] = pendingRefunds[refundAddress] + refundAmount;
+      refundBalance += refundAmount;
       PixelRefunded(refundAddress);
     }
 
     PixelPurchased(
       location,
+      msg.sender,
       currentPixel.color,
       currentPixel.url,
       currentPixel.price
@@ -71,7 +79,11 @@ contract EthPlace {
     uint amount = pendingRefunds[msg.sender];
     assert(amount > 0);
     pendingRefunds[msg.sender] = 0;
-    msg.sender.transfer(amount);
+    refundBalance -= amount;
+    if (!msg.sender.send(amount)) {
+        pendingRefunds[msg.sender] = amount;
+        refundBalance += amount;
+    }
   }
 
   function pixelLocation(uint x, uint y) private returns (uint) {
@@ -83,6 +95,6 @@ contract EthPlace {
   }
 
   function withdraw() onlyOwner {
-    owner.transfer(this.balance);
+    owner.transfer(this.balance - refundBalance);
   }
 }
